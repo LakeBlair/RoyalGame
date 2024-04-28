@@ -1,9 +1,11 @@
-package objects
+package internal
 
 type Game struct {
 	GameID uint
+	Turn uint
 	Player1 Player
 	Player2 Player
+	Winner Player
 }
 
 type Player struct {
@@ -13,8 +15,7 @@ type Player struct {
 }
 
 type Board struct {
-	BoardID uint
-	BoardState [][]byte
+	BoardState map[string]interface{}
 }
 
 type ChessPiece struct {
@@ -29,4 +30,13 @@ const (
 	InPlay
 	Finished
 )
-	 
+
+type DiceColor uint
+const (
+	Black DiceColor = iota // Black is 0
+	White // White indicates 1 move
+)
+
+type RoyalDice struct {
+	Color DiceColor
+}
