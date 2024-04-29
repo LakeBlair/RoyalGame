@@ -3,25 +3,34 @@ package internal
 type Game struct {
 	GameID uint
 	Turn uint
-	Player1 Player
-	Player2 Player
-	Winner Player
+	Player1 *Player
+	Player2 *Player
+	CurrentPlayer *Player
+	Winner *Player
+	Grid *Board
 }
 
 type Player struct {
-	PlayerID uint
 	PlayerName string
 	Pieces []ChessPiece
 }
 
+// -----------------      ---------
+// |A04|A03|A02|A01|      |A14|A13|
+// --------------------------------
+// |P05|P06|P07|P08|P09|P10|P11|P12|
+// --------------------------------
+// |B04|B03|B02|B01|      |B14|B13|
+// -----------------      ---------
 type Board struct {
-	BoardState map[string]interface{}
+	BoardState map[ChessPiece]struct{}
 }
 
 type ChessPiece struct {
 	PieceID uint
-	State ChessState
 	GridPosition string
+	State ChessState
+	PieceType byte
 }
 
 type ChessState uint
