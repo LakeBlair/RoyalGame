@@ -127,3 +127,7 @@ func PrintBoard(board *Board) {
 	}
 	fmt.Println("-")
 }
+
+func (p *Game) DeepCopy() *Player {
+	
+}

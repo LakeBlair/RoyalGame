@@ -2,6 +2,8 @@ package internal
 
 import (
 	"fmt"
+	"bufio"
+	"os"
 	"math/rand"
 )
 
@@ -38,15 +40,22 @@ func throwDices() uint {
 			move += 1
 		}
 	}
+	fmt.Printf("Your total moves is %d\n", move)
 	return move
 }
 
 func randomColor() DiceColor {
     // Generate a random number 0 or 1 and return corresponding color
     if rand.Intn(2) == 0 {
+		fmt.Println("You got Black")
         return Black
     }
+	fmt.Println("You got White")
     return White
+}
+
+func MakeMove(player *Player, move uint) {
+	var available_moves []Game = make([]Game, 0)
 }
 
 func Play(game *Game) {
@@ -56,7 +65,21 @@ func Play(game *Game) {
 	PrintBoard(game.Grid)
 	for winner != nil {
 		fmt.Printf("It's %s's turn...\n", game.CurrentPlayer.PlayerName)
+		fmt.Printf("%s, please throw your dices...\n", game.CurrentPlayer.PlayerName)
+
+		reader := bufio.NewReader(os.Stdin)
+		// The newline character triggered by pressing "Enter"
+		_, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("An error occurred while waiting for input:", err)
+			return
+		}
+
+		move := throwDices()
+		MakeMove(game.CurrentPlayer, move)
+
 		winner = GetWinner(game)
 	}
+	fmt.Printf("Game over, the winner is ")
 
 }
