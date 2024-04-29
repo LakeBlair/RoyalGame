@@ -43,11 +43,29 @@ func GetNewGame(p1 *Player, p2 *Player, currentPlayer *Player, grid *Board) *Gam
 	}
 }
 
-func GetWinner(game *Game) *Player {
-	if game.Winner == game.Player1 || game.Winner == game.Player2 {
-		return game.Winner
+func allPiecesFinished(player *Player) bool {
+	for _, pieces := range game.Player1.Pieces {
+		if pieces.State != Finished {
+			return false
+		}
 	}
-	return nil
+	return true
+}
+
+func GetWinner(game *Game) *Player {
+	if allPiecesFinished(game.Player1) {
+		game.Winner = game.Player1
+		return game.Player1
+	} else if allPiecesFinished(game.Player2) {
+		game.Winner = game.Player2
+		return game.Player2
+	} else {
+		return nil
+	}
+}
+
+func Remove[T any](slice []T, s int) []T {
+    return append(slice[:s], slice[s+1:]...)
 }
 
 func PrintUnit(unit string, board *Board) {

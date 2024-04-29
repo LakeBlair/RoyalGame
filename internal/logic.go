@@ -6,7 +6,16 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"unicode"
 )
+
+var BonusUnit = map[string]struct{}{
+	"A4": {},
+	"B4": {},
+	"8": {},
+	"A14": {},
+	"B14": {},
+}
 
 func Init_Game() {
 	fmt.Println("Initilizing the game...")
@@ -63,15 +72,49 @@ func switchCurrentPlayer(game *Game) {
 	}
 }
 
-func makeMove(game *Game, move uint) {
-	var available_moves []Game = make([]Game, 0)
+func isBonusUnit(move string) bool {
+	_, ok := BonusUnit[move]
+	return ok
+}
 
-	for _, piece := range game.CurrentPlayer.Pieces {
-		if game.CurrentPlayer == game.Player1 {
-			if piece.State == NotInPlay {
-				if _, ok := game.Grid.BoardState["A0" + strconv.Itoa(int(move))]; !ok {
+func findNewMove(input string, move int) (int) {
+    var numericPart string
 
+    // Extract the numeric part of the input string
+    if len(input) > 0 && unicode.IsLetter(rune(input[0])) {
+        // Skip the first character if it's a letter
+        numericPart = input[1:]
+    } else {
+        numericPart = input
+    }
+
+    // Parse the numeric part into an integer
+    gridPos, _ := strconv.Atoi(numericPart)
+
+    // Calculate the sum
+    newMove := move + gridPos
+    return newMove
+}
+
+func findMoves(game *Game, move int) {
+	var moves []*Game = make([]*Game, 0)
+
+	for i, piece := range game.CurrentPlayer.Pieces {
+		var potential_game *Game = game.DeepCopy()
+		var potential_move string
+
+		if game.CurrentPlayer == game.Player1 {  // Player1
+			if piece.State == NotInPlay {  // Piece Not In Play
+				potential_move = "A" + strconv.Itoa(int(move))
+				if _, ok := game.Grid.BoardState[potential_move]; !ok { 
+					potential_game.Grid.BoardState[potential_move] = piece
+					potential_game.CurrentPlayer.Pieces[i].State = InPlay
+					potential_game.CurrentPlayer.Pieces[i].GridPosition = potential_move
+					moves = append(moves, potential_game)
 				}
+			}
+			if piece.State == InPlay { // Piece on Grid
+				newMove := findNewMove(piece.GridPosition, move)
 			}
 		} else {
 			 
@@ -84,7 +127,7 @@ func Play(game *Game) {
 	var winner *Player = nil
 
 	PrintBoard(game.Grid)
-	for winner != nil {
+	for winner == nil {
 		fmt.Printf("It's %s's turn...\n", game.CurrentPlayer.PlayerName)
 		fmt.Printf("%s, please throw your dices...\n", game.CurrentPlayer.PlayerName)
 
@@ -99,10 +142,11 @@ func Play(game *Game) {
 		move := throwDices() 
 		if move == 0 {
 			fmt.Println("Rolled 0 LOL. Your turn is skipped...")
-			switchCurrentPlayer()
+			switchCurrentPlayer(game)
 			continue
 		}
-		makeMove(game.CurrentPlayer, move)
+		findMoves(game, move)
+		switchCurrentPlayer(game)
 
 		winner = GetWinner(game)
 	}
