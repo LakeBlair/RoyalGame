@@ -1,16 +1,17 @@
 package internal
 
 import (
-	"fmt"
 	"bufio"
-	"os"
+	"fmt"
 	"math/rand"
+	"os"
+	"strconv"
 )
 
 func Init_Game() {
 	fmt.Println("Initilizing the game...")
 
-	p1, p2 := GetNewPlayer("player1"), GetNewPlayer("player2")
+	p1, p2 := GetNewPlayer("player1", true), GetNewPlayer("player2", false)
 	fmt.Println("P1's team is '@'")
 	fmt.Println("P2's team is '*'")
 	playerGoFirst := goFirst(p1, p2)
@@ -54,8 +55,28 @@ func randomColor() DiceColor {
     return White
 }
 
-func MakeMove(player *Player, move uint) {
+func switchCurrentPlayer(game *Game) {
+	if game.CurrentPlayer == game.Player1 {
+		game.CurrentPlayer = game.Player2
+	} else {
+		game.CurrentPlayer = game.Player1
+	}
+}
+
+func makeMove(game *Game, move uint) {
 	var available_moves []Game = make([]Game, 0)
+
+	for _, piece := range game.CurrentPlayer.Pieces {
+		if game.CurrentPlayer == game.Player1 {
+			if piece.State == NotInPlay {
+				if _, ok := game.Grid.BoardState["A0" + strconv.Itoa(int(move))]; !ok {
+
+				}
+			}
+		} else {
+			 
+		}
+	}
 }
 
 func Play(game *Game) {
@@ -75,8 +96,13 @@ func Play(game *Game) {
 			return
 		}
 
-		move := throwDices()
-		MakeMove(game.CurrentPlayer, move)
+		move := throwDices() 
+		if move == 0 {
+			fmt.Println("Rolled 0 LOL. Your turn is skipped...")
+			switchCurrentPlayer()
+			continue
+		}
+		makeMove(game.CurrentPlayer, move)
 
 		winner = GetWinner(game)
 	}

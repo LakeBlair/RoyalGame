@@ -30,9 +30,9 @@ func (b *Board) DeepCopy() *Board {
     if b == nil {
         return nil
     }
-    newBoardState := make(map[ChessPiece]struct{})
+    newBoardState := make(map[string]ChessPiece)
     for k, v := range b.BoardState {
-        newBoardState[k.DeepCopy()] = v
+        newBoardState[k] = v.DeepCopy()
     }
     return &Board{
         BoardState: newBoardState,

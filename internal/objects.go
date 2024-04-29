@@ -23,7 +23,7 @@ type Player struct {
 // |B04|B03|B02|B01|      |B14|B13|
 // -----------------      ---------
 type Board struct {
-	BoardState map[ChessPiece]struct{}
+	BoardState map[string]ChessPiece
 }
 
 type ChessPiece struct {

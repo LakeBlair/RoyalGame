@@ -11,12 +11,27 @@ const (
 )
 
 func GetNewBoard() *Board {
-	return &Board{make(map[ChessPiece]struct{})}
+	return &Board{make(map[string]ChessPiece)}
 }
 
-func GetNewPlayer(pname string) *Player {
+func GetNewPlayer(pname string, isPlayer1 bool) *Player {
 	fmt.Printf("Generated player %s\n", pname)
-	return &Player{pname, make([]ChessPiece, StartingChessPieces)}
+	pieces := make([]ChessPiece, StartingChessPieces)
+
+	pieceType := byte('*') // Default to Player2
+    if isPlayer1 {
+        pieceType = '@'
+    }
+
+	for i := range pieces {
+        pieces[i] = ChessPiece{
+            PieceID:      uint(i),
+            GridPosition: "0", // Default position
+            State:        NotInPlay,
+            PieceType:    pieceType,
+        }
+    }
+	return &Player{pname, pieces}
 }
 
 func GetNewGame(p1 *Player, p2 *Player, currentPlayer *Player, grid *Board) *Game {
@@ -36,11 +51,9 @@ func GetWinner(game *Game) *Player {
 }
 
 func PrintUnit(unit string, board *Board) {
-	for piece := range board.BoardState {
-		if piece.GridPosition == unit {
-			fmt.Print(piece.PieceType)
-			return
-		}
+	if piece, ok := board.BoardState[unit]; ok {
+		fmt.Print(piece.PieceType)
+		return
 	}
 	print(" ")
 }
@@ -84,9 +97,9 @@ func PrintBoard(board *Board) {
 	}
 	fmt.Println("-")
 
-	for _, col := range []int{1,2,3,4,5,6,7,8} {
+	for _, col := range []int{5,6,7,8,9,10,11,12} {
 		fmt.Print("|")
-		PrintUnit("P" + strconv.Itoa(col), board)
+		PrintUnit(strconv.Itoa(col), board)
 		fmt.Print(" ")
 	}
 	fmt.Println("|")
@@ -128,6 +141,3 @@ func PrintBoard(board *Board) {
 	fmt.Println("-")
 }
 
-func (p *Game) DeepCopy() *Player {
-	
-}
