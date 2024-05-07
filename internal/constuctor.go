@@ -1,11 +1,10 @@
 package internal
 
 
-func (cp ChessPiece) DeepCopy() ChessPiece {
-    return ChessPiece{
+func (cp ChessPiece) DeepCopy() *ChessPiece {
+    return &ChessPiece{
         PieceID:      cp.PieceID,
         GridPosition: cp.GridPosition,
-        State:        cp.State,
         PieceType:    cp.PieceType,
     }
 }
@@ -15,7 +14,7 @@ func (p *Player) DeepCopy() *Player {
     if p == nil {
         return nil
     }
-    newPieces := make([]ChessPiece, len(p.Pieces))
+    newPieces := make([]*ChessPiece, len(p.Pieces))
     for i, piece := range p.Pieces {
         newPieces[i] = piece.DeepCopy()
     }
@@ -30,7 +29,7 @@ func (b *Board) DeepCopy() *Board {
     if b == nil {
         return nil
     }
-    newBoardState := make(map[string]ChessPiece)
+    newBoardState := make(map[string]*ChessPiece)
     for k, v := range b.BoardState {
         newBoardState[k] = v.DeepCopy()
     }

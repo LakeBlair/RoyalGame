@@ -77,49 +77,102 @@ func isBonusUnit(move string) bool {
 	return ok
 }
 
-func findNewMove(input string, move int) (int) {
+func findNewMove(input string, move uint) (uint) {
     var numericPart string
 
     // Extract the numeric part of the input string
     if len(input) > 0 && unicode.IsLetter(rune(input[0])) {
-        // Skip the first character if it's a letter
         numericPart = input[1:]
     } else {
         numericPart = input
     }
 
-    // Parse the numeric part into an integer
     gridPos, _ := strconv.Atoi(numericPart)
+    newMove := move + uint(gridPos)
 
-    // Calculate the sum
-    newMove := move + gridPos
     return newMove
 }
 
-func findMoves(game *Game, move int) {
+func unitOccupied(game *Game, potential_move string) bool {
+	_, occupied := game.Grid.BoardState[potential_move]
+    return occupied
+}
+
+func isEnemyPiece(game *Game, newMove string) bool {
+	return game.CurrentPlayer.Pieces[0].PieceType != game.Grid.BoardState[newMove].PieceType
+}
+
+func findChessPiece(pieces []*ChessPiece, piece *ChessPiece) *ChessPiece {
+    for _, p := range pieces {
+        if areChessPiecesEqual(p, piece) {
+            return p
+        }
+    }
+    return nil
+}
+
+func areChessPiecesEqual(piece1, piece2 *ChessPiece) bool {
+    if piece1 == nil && piece2 == nil {
+        return true
+    }
+    if piece1 == nil || piece2 == nil {
+        return false
+    }
+    return piece1.PieceID == piece2.PieceID &&
+        piece1.GridPosition == piece2.GridPosition &&
+        piece1.PieceType == piece2.PieceType
+}
+
+
+func findMoves(game *Game, move uint) []*Game {
 	var moves []*Game = make([]*Game, 0)
 
 	for i, piece := range game.CurrentPlayer.Pieces {
 		var potential_game *Game = game.DeepCopy()
+		var potential_piece *ChessPiece = findChessPiece(potential_game.CurrentPlayer.Pieces, piece)
 		var potential_move string
 
-		if game.CurrentPlayer == game.Player1 {  // Player1
-			if piece.State == NotInPlay {  // Piece Not In Play
-				potential_move = "A" + strconv.Itoa(int(move))
-				if _, ok := game.Grid.BoardState[potential_move]; !ok { 
-					potential_game.Grid.BoardState[potential_move] = piece
-					potential_game.CurrentPlayer.Pieces[i].State = InPlay
-					potential_game.CurrentPlayer.Pieces[i].GridPosition = potential_move
+		newMove := findNewMove(potential_piece.GridPosition, move)
+		if newMove <= 4 || newMove >= 13 {
+			if (newMove > 15) { // No available move
+				continue
+			}
+			potential_move = string(game.CurrentPlayer.Party) + strconv.Itoa(int(newMove))
+			if unitOccupied(potential_game, potential_move) { // Cannot do anything to friendly pieces
+				continue
+			}
+			if (move == 15) { // Finish this piece
+				delete(potential_game.Grid.BoardState, potential_piece.GridPosition)
+			} else { // Move to an empty unit
+				potential_game.Grid.BoardState[potential_move] = potential_piece
+			}
+			potential_game.CurrentPlayer.Pieces[i].GridPosition = potential_move
+			moves = append(moves, potential_game)
+		} else { // The new move is somewhere between 5-12
+			potential_move = strconv.Itoa(int(newMove))
+			if unitOccupied(potential_game, potential_move) {
+				if (isEnemyPiece(potential_game, potential_move)) { // Potentially eat enemy piece
+					if (potential_move == "8") {
+						if !unitOccupied(potential_game, "9") { // If enemy is on 8, potentially jump to 9 if 9 is empty
+							potential_move = "9"
+						} else {
+							continue // It cannot jump, therefore no move
+						}
+					} 
+					potential_game.Grid.BoardState[potential_move].GridPosition = "0"
+					potential_game.Grid.BoardState[potential_move] = potential_piece
+					potential_game.Grid.BoardState[potential_move].GridPosition = potential_move
 					moves = append(moves, potential_game)
 				}
+			} else { // Potentially move to an empty unit
+				potential_game.Grid.BoardState[potential_move] = potential_piece
+				potential_game.Grid.BoardState[potential_move].GridPosition = potential_move
+				moves = append(moves, potential_game)
 			}
-			if piece.State == InPlay { // Piece on Grid
-				newMove := findNewMove(piece.GridPosition, move)
-			}
-		} else {
-			 
 		}
 	}
+
+	return moves
 }
 
 func Play(game *Game) {

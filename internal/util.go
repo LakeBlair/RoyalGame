@@ -11,27 +11,29 @@ const (
 )
 
 func GetNewBoard() *Board {
-	return &Board{make(map[string]ChessPiece)}
+	return &Board{make(map[string]*ChessPiece)}
 }
 
 func GetNewPlayer(pname string, isPlayer1 bool) *Player {
 	fmt.Printf("Generated player %s\n", pname)
-	pieces := make([]ChessPiece, StartingChessPieces)
+	pieces := make([]*ChessPiece, StartingChessPieces)
 
-	pieceType := byte('*') // Default to Player2
+	pieceType := rune('*') // Default to Player2
+	party := rune('B')
+
     if isPlayer1 {
         pieceType = '@'
+		party = 'A'
     }
 
 	for i := range pieces {
-        pieces[i] = ChessPiece{
+        pieces[i] = &ChessPiece{
             PieceID:      uint(i),
             GridPosition: "0", // Default position
-            State:        NotInPlay,
             PieceType:    pieceType,
         }
     }
-	return &Player{pname, pieces}
+	return &Player{party, pname, pieces}
 }
 
 func GetNewGame(p1 *Player, p2 *Player, currentPlayer *Player, grid *Board) *Game {
@@ -44,8 +46,8 @@ func GetNewGame(p1 *Player, p2 *Player, currentPlayer *Player, grid *Board) *Gam
 }
 
 func allPiecesFinished(player *Player) bool {
-	for _, pieces := range game.Player1.Pieces {
-		if pieces.State != Finished {
+	for _, pieces := range player.Pieces {
+		if grid, err := strconv.Atoi(pieces.GridPosition[1:]); err != nil || grid != 15 {
 			return false
 		}
 	}

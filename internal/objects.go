@@ -11,8 +11,9 @@ type Game struct {
 }
 
 type Player struct {
+	Party rune
 	PlayerName string
-	Pieces []ChessPiece
+	Pieces []*ChessPiece
 }
 
 // -------------     ---------
@@ -23,14 +24,13 @@ type Player struct {
 // |B4|B3|B2|B1|     |B14|B13|
 // -------------     ---------
 type Board struct {
-	BoardState map[string]ChessPiece
+	BoardState map[string]*ChessPiece
 }
 
 type ChessPiece struct {
 	PieceID uint
 	GridPosition string
-	State ChessState
-	PieceType byte
+	PieceType rune
 }
 
 type ChessState uint
