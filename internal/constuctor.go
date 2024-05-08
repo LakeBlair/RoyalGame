@@ -51,6 +51,7 @@ func (g *Game) DeepCopy() *Game {
         CurrentPlayer:  nil,
         Winner:         nil,
         Grid:           g.Grid.DeepCopy(),
+        BonusRound:     g.BonusRound,
     }
 
     // Assign CurrentPlayer and Winner by reference

@@ -8,6 +8,7 @@ type Game struct {
 	CurrentPlayer *Player
 	Winner *Player
 	Grid *Board
+	BonusRound bool
 }
 
 type Player struct {

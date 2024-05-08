@@ -9,7 +9,7 @@ import (
 	"unicode"
 )
 
-var BonusUnit = map[string]struct{}{
+var BonusTile = map[string]struct{}{
 	"A4": {},
 	"B4": {},
 	"8": {},
@@ -65,6 +65,11 @@ func randomColor() DiceColor {
 }
 
 func switchCurrentPlayer(game *Game) {
+	if game.BonusRound {
+		game.BonusRound = false
+		return
+	}
+
 	if game.CurrentPlayer == game.Player1 {
 		game.CurrentPlayer = game.Player2
 	} else {
@@ -72,8 +77,8 @@ func switchCurrentPlayer(game *Game) {
 	}
 }
 
-func isBonusUnit(move string) bool {
-	_, ok := BonusUnit[move]
+func isBonusTile(move string) bool {
+	_, ok := BonusTile[move]
 	return ok
 }
 
@@ -124,30 +129,44 @@ func areChessPiecesEqual(piece1, piece2 *ChessPiece) bool {
 }
 
 
-func findMoves(game *Game, move uint) []*Game {
+func findMoves(game *Game, move uint) ([]*Game, []string) {
 	var moves []*Game = make([]*Game, 0)
+	var messages []string = make([]string, 0)
+	var move_count uint = 0
 
-	for i, piece := range game.CurrentPlayer.Pieces {
+	for _, piece := range game.CurrentPlayer.Pieces {
 		var potential_game *Game = game.DeepCopy()
 		var potential_piece *ChessPiece = findChessPiece(potential_game.CurrentPlayer.Pieces, piece)
 		var potential_move string
+		var message string = strconv.Itoa(int(move_count)) + ". "
 
 		newMove := findNewMove(potential_piece.GridPosition, move)
 		if newMove <= 4 || newMove >= 13 {
 			if (newMove > 15) { // No available move
 				continue
 			}
+
 			potential_move = string(game.CurrentPlayer.Party) + strconv.Itoa(int(newMove))
 			if unitOccupied(potential_game, potential_move) { // Cannot do anything to friendly pieces
 				continue
 			}
+
 			if (move == 15) { // Finish this piece
-				delete(potential_game.Grid.BoardState, potential_piece.GridPosition)
+				message += "Ascended a piece from tile " + potential_piece.GridPosition
 			} else { // Move to an empty unit
 				potential_game.Grid.BoardState[potential_move] = potential_piece
+				message += "Move a piece from tile " + potential_piece.GridPosition + " to tile " + potential_move
 			}
-			potential_game.CurrentPlayer.Pieces[i].GridPosition = potential_move
+
+			if isBonusTile(potential_move) {
+				potential_game.BonusRound = true
+			}
+
+			delete(potential_game.Grid.BoardState, potential_piece.GridPosition)
+			potential_piece.GridPosition = potential_move
 			moves = append(moves, potential_game)
+			messages = append(messages, message)
+			move_count += 1
 		} else { // The new move is somewhere between 5-12
 			potential_move = strconv.Itoa(int(newMove))
 			if unitOccupied(potential_game, potential_move) {
@@ -155,16 +174,27 @@ func findMoves(game *Game, move uint) []*Game {
 					if (potential_move == "8") {
 						if !unitOccupied(potential_game, "9") { // If enemy is on 8, potentially jump to 9 if 9 is empty
 							potential_move = "9"
+							message += "Jump the piece from tile " + potential_piece.GridPosition + " to tile " + potential_move
+							goto tile_jump
 						} else {
 							continue // It cannot jump, therefore no move
 						}
-					} 
+					}
+					message += "Move a piece from tile " + potential_piece.GridPosition + " to tile " + potential_move + " to capture a piece"
 					potential_game.Grid.BoardState[potential_move].GridPosition = "0"
-					potential_game.Grid.BoardState[potential_move] = potential_piece
-					potential_game.Grid.BoardState[potential_move].GridPosition = potential_move
-					moves = append(moves, potential_game)
+
+					tile_jump: // If we jumped tile 8, we only need to do this
+						delete(potential_game.Grid.BoardState, potential_piece.GridPosition)
+						potential_piece.GridPosition = potential_move
+						potential_game.Grid.BoardState[potential_move] = potential_piece
+						moves = append(moves, potential_game)
+						messages = append(messages, message)
 				}
 			} else { // Potentially move to an empty unit
+				if isBonusTile(potential_move) {
+					potential_game.BonusRound = true
+				}
+
 				potential_game.Grid.BoardState[potential_move] = potential_piece
 				potential_game.Grid.BoardState[potential_move].GridPosition = potential_move
 				moves = append(moves, potential_game)
@@ -172,7 +202,7 @@ func findMoves(game *Game, move uint) []*Game {
 		}
 	}
 
-	return moves
+	return moves, messages
 }
 
 func Play(game *Game) {
@@ -194,7 +224,7 @@ func Play(game *Game) {
 
 		move := throwDices() 
 		if move == 0 {
-			fmt.Println("Rolled 0 LOL. Your turn is skipped...")
+			fmt.Println(game.CurrentPlayer.PlayerName + " rolled 0 LOL. Your turn is skipped...")
 			switchCurrentPlayer(game)
 			continue
 		}
