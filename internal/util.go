@@ -78,7 +78,33 @@ func PrintUnit(unit string, board *Board) {
 	print(" ")
 }
 
-func ParseMove() int {
+func PrintPlayerProgress(player *Player) {
+	count := 0
+
+	for _, piece := range player.Pieces {
+		if piece.GridPosition == "15" {
+			count += 1
+		}
+	}
+
+	fmt.Printf("%s's progress %d/%d\n", player.PlayerName, count, len(player.Pieces))
+}
+
+func PrintMap(BoardState map[string]*ChessPiece) {
+    fmt.Printf("len: %d, map: {", len(BoardState))
+    for k, v := range BoardState {
+        fmt.Printf("%s: %c, ", k, v.PieceType)
+    }
+    fmt.Println("}")
+}
+
+func PrintPlayerPieces(player *Player) {
+	for _, piece := range player.Pieces {
+		fmt.Printf("ID: %d, GridPos: %s\n", piece.PieceID, piece.GridPosition)
+	}
+}
+
+func ParseMove(num_moves int) int {
 	var input string
 	var err error
 	var num int
@@ -92,8 +118,8 @@ func ParseMove() int {
 		}
 
 		num, err = strconv.Atoi(input)
-		if err != nil || num < 0 || num > 9 {
-			fmt.Println("Invalid input. Please enter a digit from 0 to 9.")
+		if err != nil || num < 0 || num >= int(num_moves) {
+			fmt.Printf("Invalid input. Please enter a digit from 0 to %d.\n", num_moves - 1)
 			continue
 		}
 

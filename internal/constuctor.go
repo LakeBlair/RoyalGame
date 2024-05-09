@@ -1,7 +1,7 @@
 package internal
 
 
-func (cp ChessPiece) DeepCopy() *ChessPiece {
+func (cp *ChessPiece) DeepCopy() *ChessPiece {
     return &ChessPiece{
         PieceID:      cp.PieceID,
         GridPosition: cp.GridPosition,

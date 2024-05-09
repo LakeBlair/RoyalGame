@@ -141,6 +141,24 @@ func addMove(moves *[]*Game, messages *[]string, potential_game *Game, message *
 	*count += 1
 }
 
+func getOpponentPlayer(game *Game) *Player {
+	if game.CurrentPlayer == game.Player1 {
+		return game.Player2
+	} else {
+		return game.Player1
+	}
+}
+
+func handleCapturing(game *Game, move string) {
+	opponent := getOpponentPlayer(game)
+	for _, piece := range opponent.Pieces {
+		if piece.GridPosition == move {
+			piece.GridPosition = "0"
+			return
+		}
+	}
+}
+
 func findMoves(game *Game, move uint) ([]*Game, []string) {
 	var moves []*Game = make([]*Game, 0)
 	var messages []string = make([]string, 0)
@@ -163,7 +181,7 @@ func findMoves(game *Game, move uint) ([]*Game, []string) {
 				continue
 			}
 
-			if (move == 15) { // Finish this piece
+			if (newMove == 15) { // Finish this piece
 				message += "Ascended a piece from tile " + potential_piece.GridPosition
 			} else { // Move to an empty unit
 				potential_game.Grid.BoardState[potential_move] = potential_piece
@@ -180,25 +198,27 @@ func findMoves(game *Game, move uint) ([]*Game, []string) {
 			addMove(&moves, &messages, potential_game, &message, &move_count)
 		} else { // The new move is somewhere between 5-12
 			potential_move = strconv.Itoa(int(newMove))
+			jump := false
+
 			if unitOccupied(potential_game, potential_move) {
 				if (isEnemyPiece(potential_game, potential_move)) { // Potentially eat enemy piece
 					if (potential_move == "8") {
 						if !unitOccupied(potential_game, "9") { // If enemy is on 8, potentially jump to 9 if 9 is empty
 							potential_move = "9"
 							message += "Jump the piece from tile " + potential_piece.GridPosition + " to tile " + potential_move
-							goto tile_jump
+							jump = true
 						} else {
 							continue // It cannot jump, therefore no move
 						}
 					}
-					message += "Move a piece from tile " + potential_piece.GridPosition + " to tile " + potential_move + " to capture a piece"
-					potential_game.Grid.BoardState[potential_move].GridPosition = "0"
-
-					tile_jump: // If we jumped tile 8, we only need to do this
-						delete(potential_game.Grid.BoardState, potential_piece.GridPosition)
-						potential_piece.GridPosition = potential_move
-						potential_game.Grid.BoardState[potential_move] = potential_piece
-						addMove(&moves, &messages, potential_game, &message, &move_count)
+					if !jump {
+						message += "Move a piece from tile " + potential_piece.GridPosition + " to tile " + potential_move + " to capture a piece"
+						handleCapturing(potential_game, potential_move)
+					}
+					delete(potential_game.Grid.BoardState, potential_piece.GridPosition)
+					potential_piece.GridPosition = potential_move
+					potential_game.Grid.BoardState[potential_move] = potential_piece // Move the new piece to the pos of the captured piece
+					addMove(&moves, &messages, potential_game, &message, &move_count)
 				}
 			} else { // Potentially move to an empty unit
 				message += "Move a piece from tile " + potential_piece.GridPosition + " to tile " + potential_move
@@ -209,8 +229,8 @@ func findMoves(game *Game, move uint) ([]*Game, []string) {
 				}
 
 				delete(potential_game.Grid.BoardState, potential_piece.GridPosition)
+				potential_piece.GridPosition = potential_move
 				potential_game.Grid.BoardState[potential_move] = potential_piece
-				potential_game.Grid.BoardState[potential_move].GridPosition = potential_move
 				addMove(&moves, &messages, potential_game, &message, &move_count)
 			}
 		}
@@ -230,36 +250,37 @@ func Play(game *Game) {
 		fmt.Printf("%s, please throw your dices...\n", game.CurrentPlayer.PlayerName)
 
 		reader := bufio.NewReader(os.Stdin)
-		// The newline character triggered by pressing "Enter"
-		_, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("An error occurred while waiting for input:", err)
-			return
-		}
-
+		_, _ = reader.ReadByte()
 		dices_res := throwDices() 
+
 		if dices_res == 0 {
 			fmt.Println(game.CurrentPlayer.PlayerName + " rolled 0 LOL. Your turn is skipped...")
 			switchCurrentPlayer(game)
 			continue
 		}
+
 		moves, messages := findMoves(game, dices_res)
+		if len(moves) == 0 {
+			fmt.Println("You don't have any moves available, switching players...")
+			continue
+		}
 
 		fmt.Printf("%s, please choose your move\n\n", game.CurrentPlayer.PlayerName)
 		for _, message := range messages {
 			fmt.Println(message)
 		}
-		player_move = uint(ParseMove())
+
+		player_move = uint(ParseMove(len(moves)))
 		game = moves[player_move]
 		switchCurrentPlayer(game)
-
-		fmt.Println("Printing Map")
-		for key, piece := range game.Grid.BoardState {
-			fmt.Printf("%s, %s\n", key, piece.GridPosition)
-		}
+		PrintMap(game.Grid.BoardState)
 		PrintBoard(game.Grid)
+		PrintPlayerProgress(game.Player1)
+		PrintPlayerPieces(game.Player1)
+		PrintPlayerProgress(game.Player2)
+		PrintPlayerPieces(game.Player2)
 		winner = GetWinner(game)
 	}
-	fmt.Printf("Game over, the winner is ")
 
+	fmt.Printf("Game over, the winner is %s\n", game.Winner.PlayerName)
 }
