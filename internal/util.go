@@ -82,7 +82,7 @@ func PrintPlayerProgress(player *Player) {
 	count := 0
 
 	for _, piece := range player.Pieces {
-		if piece.GridPosition == "15" {
+		if piece.GridPosition[1:] == "15" {
 			count += 1
 		}
 	}

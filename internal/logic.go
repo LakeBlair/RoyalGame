@@ -159,6 +159,17 @@ func handleCapturing(game *Game, move string) {
 	}
 }
 
+func handleNewMove(game *Game, piece *ChessPiece, move string, message *string) {
+	if isBonusTile(move) {
+		game.BonusRound = true
+		*message += " (Bonus!)"
+	}
+
+	delete(game.Grid.BoardState, piece.GridPosition)
+	piece.GridPosition = move
+	game.Grid.BoardState[move] = piece
+}
+
 func findMoves(game *Game, move uint) ([]*Game, []string) {
 	var moves []*Game = make([]*Game, 0)
 	var messages []string = make([]string, 0)
@@ -182,19 +193,12 @@ func findMoves(game *Game, move uint) ([]*Game, []string) {
 			}
 
 			if (newMove == 15) { // Finish this piece
-				message += "Ascended a piece from tile " + potential_piece.GridPosition
+				message += "Ascended a piece from tile " + potential_piece.GridPosition + " (Finish!)"
 			} else { // Move to an empty unit
-				potential_game.Grid.BoardState[potential_move] = potential_piece
 				message += "Move a piece from tile " + potential_piece.GridPosition + " to tile " + potential_move
 			}
 
-			if isBonusTile(potential_move) {
-				potential_game.BonusRound = true
-				message += " (Bonus!)"
-			}
-
-			delete(potential_game.Grid.BoardState, potential_piece.GridPosition)
-			potential_piece.GridPosition = potential_move
+			handleNewMove(potential_game, potential_piece, potential_move, &message)
 			addMove(&moves, &messages, potential_game, &message, &move_count)
 		} else { // The new move is somewhere between 5-12
 			potential_move = strconv.Itoa(int(newMove))
@@ -212,25 +216,15 @@ func findMoves(game *Game, move uint) ([]*Game, []string) {
 						}
 					}
 					if !jump {
-						message += "Move a piece from tile " + potential_piece.GridPosition + " to tile " + potential_move + " to capture a piece"
+						message += "Move a piece from tile " + potential_piece.GridPosition + " to tile " + potential_move + " (Capture!)"
 						handleCapturing(potential_game, potential_move)
 					}
-					delete(potential_game.Grid.BoardState, potential_piece.GridPosition)
-					potential_piece.GridPosition = potential_move
-					potential_game.Grid.BoardState[potential_move] = potential_piece // Move the new piece to the pos of the captured piece
+					handleNewMove(potential_game, potential_piece, potential_move, &message)
 					addMove(&moves, &messages, potential_game, &message, &move_count)
 				}
 			} else { // Potentially move to an empty unit
 				message += "Move a piece from tile " + potential_piece.GridPosition + " to tile " + potential_move
-
-				if isBonusTile(potential_move) {
-					potential_game.BonusRound = true
-					message += " (Bonus!)"
-				}
-
-				delete(potential_game.Grid.BoardState, potential_piece.GridPosition)
-				potential_piece.GridPosition = potential_move
-				potential_game.Grid.BoardState[potential_move] = potential_piece
+				handleNewMove(potential_game, potential_piece, potential_move, &message)
 				addMove(&moves, &messages, potential_game, &message, &move_count)
 			}
 		}
