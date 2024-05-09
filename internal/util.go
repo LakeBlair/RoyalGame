@@ -22,8 +22,8 @@ func GetNewPlayer(pname string, isPlayer1 bool) *Player {
 	party := rune('B')
 
     if isPlayer1 {
-        pieceType = '@'
-		party = 'A'
+        pieceType = rune('@')
+		party = rune('A')
     }
 
 	for i := range pieces {
@@ -72,10 +72,35 @@ func Remove[T any](slice []T, s int) []T {
 
 func PrintUnit(unit string, board *Board) {
 	if piece, ok := board.BoardState[unit]; ok {
-		fmt.Print(piece.PieceType)
+		fmt.Printf("%c", piece.PieceType)
 		return
 	}
 	print(" ")
+}
+
+func ParseMove() int {
+	var input string
+	var err error
+	var num int
+
+	// Keep asking for input until a valid digit is entered
+	for {
+		_, err = fmt.Scanln(&input)
+		if err != nil {
+			fmt.Println("Error reading input:", err)
+			continue
+		}
+
+		num, err = strconv.Atoi(input)
+		if err != nil || num < 0 || num > 9 {
+			fmt.Println("Invalid input. Please enter a digit from 0 to 9.")
+			continue
+		}
+
+		break
+	}
+
+	return num
 }
 
 func PrintBoard(board *Board) {

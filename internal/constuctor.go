@@ -21,6 +21,7 @@ func (p *Player) DeepCopy() *Player {
     return &Player{
         PlayerName: p.PlayerName,
         Pieces:     newPieces,
+        Party:      p.Party,
     }
 }
 

@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"strings"
 	"unicode"
 )
 
@@ -66,6 +67,7 @@ func randomColor() DiceColor {
 
 func switchCurrentPlayer(game *Game) {
 	if game.BonusRound {
+		fmt.Printf("%s activates an extra turn!!\n", game.CurrentPlayer.PlayerName)
 		game.BonusRound = false
 		return
 	}
@@ -128,6 +130,16 @@ func areChessPiecesEqual(piece1, piece2 *ChessPiece) bool {
         piece1.PieceType == piece2.PieceType
 }
 
+func addMove(moves *[]*Game, messages *[]string, potential_game *Game, message *string, count *uint) {
+	for _, str := range *messages {
+		if strings.Contains(str, (*message)[3:]) {
+			return
+		}
+	}
+	*moves = append(*moves, potential_game)
+	*messages = append(*messages, *message)
+	*count += 1
+}
 
 func findMoves(game *Game, move uint) ([]*Game, []string) {
 	var moves []*Game = make([]*Game, 0)
@@ -146,7 +158,7 @@ func findMoves(game *Game, move uint) ([]*Game, []string) {
 				continue
 			}
 
-			potential_move = string(game.CurrentPlayer.Party) + strconv.Itoa(int(newMove))
+			potential_move = string(potential_game.CurrentPlayer.Party) + strconv.Itoa(int(newMove))
 			if unitOccupied(potential_game, potential_move) { // Cannot do anything to friendly pieces
 				continue
 			}
@@ -160,13 +172,12 @@ func findMoves(game *Game, move uint) ([]*Game, []string) {
 
 			if isBonusTile(potential_move) {
 				potential_game.BonusRound = true
+				message += " (Bonus!)"
 			}
 
 			delete(potential_game.Grid.BoardState, potential_piece.GridPosition)
 			potential_piece.GridPosition = potential_move
-			moves = append(moves, potential_game)
-			messages = append(messages, message)
-			move_count += 1
+			addMove(&moves, &messages, potential_game, &message, &move_count)
 		} else { // The new move is somewhere between 5-12
 			potential_move = strconv.Itoa(int(newMove))
 			if unitOccupied(potential_game, potential_move) {
@@ -187,17 +198,20 @@ func findMoves(game *Game, move uint) ([]*Game, []string) {
 						delete(potential_game.Grid.BoardState, potential_piece.GridPosition)
 						potential_piece.GridPosition = potential_move
 						potential_game.Grid.BoardState[potential_move] = potential_piece
-						moves = append(moves, potential_game)
-						messages = append(messages, message)
+						addMove(&moves, &messages, potential_game, &message, &move_count)
 				}
 			} else { // Potentially move to an empty unit
+				message += "Move a piece from tile " + potential_piece.GridPosition + " to tile " + potential_move
+
 				if isBonusTile(potential_move) {
 					potential_game.BonusRound = true
+					message += " (Bonus!)"
 				}
 
+				delete(potential_game.Grid.BoardState, potential_piece.GridPosition)
 				potential_game.Grid.BoardState[potential_move] = potential_piece
 				potential_game.Grid.BoardState[potential_move].GridPosition = potential_move
-				moves = append(moves, potential_game)
+				addMove(&moves, &messages, potential_game, &message, &move_count)
 			}
 		}
 	}
@@ -208,6 +222,7 @@ func findMoves(game *Game, move uint) ([]*Game, []string) {
 func Play(game *Game) {
 	fmt.Println("Game started")
 	var winner *Player = nil
+	var player_move uint
 
 	PrintBoard(game.Grid)
 	for winner == nil {
@@ -222,15 +237,27 @@ func Play(game *Game) {
 			return
 		}
 
-		move := throwDices() 
-		if move == 0 {
+		dices_res := throwDices() 
+		if dices_res == 0 {
 			fmt.Println(game.CurrentPlayer.PlayerName + " rolled 0 LOL. Your turn is skipped...")
 			switchCurrentPlayer(game)
 			continue
 		}
-		findMoves(game, move)
+		moves, messages := findMoves(game, dices_res)
+
+		fmt.Printf("%s, please choose your move\n\n", game.CurrentPlayer.PlayerName)
+		for _, message := range messages {
+			fmt.Println(message)
+		}
+		player_move = uint(ParseMove())
+		game = moves[player_move]
 		switchCurrentPlayer(game)
 
+		fmt.Println("Printing Map")
+		for key, piece := range game.Grid.BoardState {
+			fmt.Printf("%s, %s\n", key, piece.GridPosition)
+		}
+		PrintBoard(game.Grid)
 		winner = GetWinner(game)
 	}
 	fmt.Printf("Game over, the winner is ")
