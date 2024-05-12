@@ -1,9 +1,10 @@
-package main
+package server
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
-    "fmt"
 
 	"github.com/gorilla/websocket"
 )
@@ -11,6 +12,10 @@ import (
 var upgrader = websocket.Upgrader{
     ReadBufferSize:  1024,
     WriteBufferSize: 1024,
+}
+
+type ApiResponse struct {
+    Message string `json:"message"`
 }
 
 func reader(conn *websocket.Conn) {
@@ -46,7 +51,7 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request) {
     defer conn.Close() 
 
     log.Println("Client Connected")
-    err = conn.WriteMessage(1, []byte("Hi Client!"))
+    err = conn.WriteMessage(websocket.TextMessage, []byte("Hi Client!"))
     if err != nil {
         log.Println(err)
     }
@@ -54,16 +59,27 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request) {
     reader(conn)
 }
 
-func homePage(w http.ResponseWriter, r *http.Request) {
-    http.ServeFile(w, r, "./index.html")
+func dataHandler(w http.ResponseWriter, r *http.Request) {
+    response := ApiResponse{Message: "Hello from the Golang API!"}
+    log.Println("Hello from the Golang API!")
+    json.NewEncoder(w).Encode(response)
 }
+
+
+// func homePage(w http.ResponseWriter, r *http.Request) {
+//     http.ServeFile(w, r, "../../frontend/build")
+// }
 
 func setupRoutes() {
-    http.HandleFunc("/", homePage)
+    log.Println("Setting up routes")
+    buildDir := http.Dir("../../frontend/build")
+    fs := http.FileServer(buildDir)
+    http.Handle("/", fs)
     http.HandleFunc("/ws", wsEndpoint)
+    http.HandleFunc("/api/data", dataHandler)
 }
 
-func main() {
+func LaunchGameServer() {
     setupRoutes()
     log.Fatal(http.ListenAndServe(":8080", nil))
 }
