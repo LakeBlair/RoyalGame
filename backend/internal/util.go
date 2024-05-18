@@ -3,6 +3,7 @@ package internal
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -70,13 +71,6 @@ func Remove[T any](slice []T, s int) []T {
     return append(slice[:s], slice[s+1:]...)
 }
 
-func PrintUnit(unit string, board *Board) {
-	if piece, ok := board.BoardState[unit]; ok {
-		fmt.Printf("%c", piece.PieceType)
-		return
-	}
-	print(" ")
-}
 
 func PrintPlayerProgress(player *Player) {
 	count := 0
@@ -98,10 +92,14 @@ func PrintMap(BoardState map[string]*ChessPiece) {
     fmt.Println("}")
 }
 
-func PrintPlayerPieces(player *Player) {
+func PrintPlayerPieces(player *Player) string {
+    s := ""
 	for _, piece := range player.Pieces {
-		fmt.Printf("ID: %d, GridPos: %s\n", piece.PieceID, piece.GridPosition)
+		if piece.GridPosition != "0" {
+			s += fmt.Sprintf("ID: %d, GridPos: %s\n", piece.PieceID, piece.GridPosition)
+		}
 	}
+    return s
 }
 
 func ParseMove(num_moves int) int {
@@ -129,86 +127,96 @@ func ParseMove(num_moves int) int {
 	return num
 }
 
-func PrintBoard(board *Board) {
-	// Print First Row
-	for row := range GridLength {
-		if row == 4 || row == 5 {
-			if row == 4 {
-				fmt.Print("-  ")
-				continue
-			}
-			fmt.Print("   ")
-			continue
-		}
-		fmt.Print("---")
-	}
+func PrintBoard(board *Board) string {
+    var sb strings.Builder
 
-	fmt.Println("-")
+    // Print First Row
+    for row := range GridLength {
+        if row == 4 || row == 5 {
+            if row == 4 {
+                sb.WriteString("-  ")
+                continue
+            }
+            sb.WriteString("   ")
+            continue
+        }
+        sb.WriteString("---")
+    }
 
-	// Handle printing pieces
-	for _, col := range []int{4,3,2,1,-1,-2,14,13} {
-		if col < 0 {
-			if col == -1 {
-				fmt.Print("|  ")
-				continue
-			}
-			fmt.Print("   ")
-			continue
-		}
-		fmt.Print("|")
-		PrintUnit("A" + strconv.Itoa(col), board)
-		fmt.Print(" ")
-	}
+    sb.WriteString("-\n")
 
-	fmt.Println("|")
+    // Handle printing pieces
+    for _, col := range []int{4, 3, 2, 1, -1, -2, 14, 13} {
+        if col < 0 {
+            if col == -1 {
+                sb.WriteString("|  ")
+                continue
+            }
+            sb.WriteString("   ")
+            continue
+        }
+        sb.WriteString("|")
+        sb.WriteString(PrintUnit("A"+strconv.Itoa(col), board))
+        sb.WriteString(" ")
+    }
 
-	// Second Row
-	for range GridLength {
-		fmt.Print("---")
-	}
-	fmt.Println("-")
+    sb.WriteString("|\n")
 
-	for _, col := range []int{5,6,7,8,9,10,11,12} {
-		fmt.Print("|")
-		PrintUnit(strconv.Itoa(col), board)
-		fmt.Print(" ")
-	}
-	fmt.Println("|")
+    // Second Row
+    for range GridLength {
+        sb.WriteString("---")
+    }
+    sb.WriteString("-\n")
 
-	// Third Row
-	for range GridLength {
-		fmt.Print("---")
-	}
+    for _, col := range []int{5, 6, 7, 8, 9, 10, 11, 12} {
+        sb.WriteString("|")
+        sb.WriteString(PrintUnit(strconv.Itoa(col), board))
+        sb.WriteString(" ")
+    }
+    sb.WriteString("|\n")
 
-	fmt.Println("-")
+    // Third Row
+    for range GridLength {
+        sb.WriteString("---")
+    }
 
-	for _, col := range []int{4,3,2,1,-1,-2,14,13} {
-		if col < 0 {
-			if col == -1 {
-				fmt.Print("|  ")
-				continue
-			}
-			fmt.Print("   ")
-			continue
-		}
-		fmt.Print("|")
-		PrintUnit("B" + strconv.Itoa(col), board)
-		fmt.Print(" ")
-	}
+    sb.WriteString("-\n")
 
-	fmt.Println("|")
+    for _, col := range []int{4, 3, 2, 1, -1, -2, 14, 13} {
+        if col < 0 {
+            if col == -1 {
+                sb.WriteString("|  ")
+                continue
+            }
+            sb.WriteString("   ")
+            continue
+        }
+        sb.WriteString("|")
+        sb.WriteString(PrintUnit("B"+strconv.Itoa(col), board))
+        sb.WriteString(" ")
+    }
 
-	for row := range GridLength {
-		if row == 4 || row == 5 {
-			if row == 4 {
-				fmt.Print("-  ")
-				continue
-			}
-			fmt.Print("   ")
-			continue
-		}
-		fmt.Print("---")
-	}
-	fmt.Println("-")
+    sb.WriteString("|\n")
+
+    for row := range GridLength {
+        if row == 4 || row == 5 {
+            if row == 4 {
+                sb.WriteString("-  ")
+                continue
+            }
+            sb.WriteString("   ")
+            continue
+        }
+        sb.WriteString("---")
+    }
+    sb.WriteString("-\n")
+    
+    return sb.String()
 }
 
+func PrintUnit(unit string, board *Board) string {
+    if piece, ok := board.BoardState[unit]; ok {
+        return string(piece.PieceType)
+    }
+    return " "
+}

@@ -1,13 +1,14 @@
 package internal
 
 import (
-	"bufio"
 	"fmt"
 	"math/rand"
-	"os"
+	"log"
 	"strconv"
 	"strings"
 	"unicode"
+
+	// "github.com/gorilla/websocket"
 )
 
 var BonusTile = map[string]struct{}{
@@ -18,7 +19,7 @@ var BonusTile = map[string]struct{}{
 	"B14": {},
 }
 
-func Init_Game() {
+func Init_Game() (game *Game) {
 	fmt.Println("Initilizing the game...")
 
 	p1, p2 := GetNewPlayer("player1", true), GetNewPlayer("player2", false)
@@ -26,9 +27,9 @@ func Init_Game() {
 	fmt.Println("P2's team is '*'")
 	playerGoFirst := goFirst(p1, p2)
 	grid := GetNewBoard()
-	game := GetNewGame(p1, p2, playerGoFirst, grid)
+	game = GetNewGame(p1, p2, playerGoFirst, grid)
 
-	Play(game)
+	return game
 }
 
 func goFirst(p1 *Player, p2 *Player) *Player {
@@ -44,30 +45,30 @@ func goFirst(p1 *Player, p2 *Player) *Player {
 	}
 }
 
-func throwDices() uint {
+func throwDices(s *GameSession) uint {
 	var move uint = 0
 	for i := 0; i < 4; i++  {
 		if randomColor() == White {
 			move += 1
 		}
 	}
-	fmt.Printf("Your total moves is %d\n", move)
+	SendToAll(s, Dice, fmt.Sprintf("%s's total moves is %d\n", s.Game.CurrentPlayer.PlayerName, move))
 	return move
 }
 
 func randomColor() DiceColor {
     // Generate a random number 0 or 1 and return corresponding color
     if rand.Intn(2) == 0 {
-		fmt.Println("You got Black")
+		log.Println("You got Black")
         return Black
     }
-	fmt.Println("You got White")
+	log.Println("You got White")
     return White
 }
 
 func switchCurrentPlayer(game *Game) {
 	if game.BonusRound {
-		fmt.Printf("%s activates an extra turn!!\n", game.CurrentPlayer.PlayerName)
+		log.Printf("%s activates an extra turn!!\n", game.CurrentPlayer.PlayerName)
 		game.BonusRound = false
 		return
 	}
@@ -101,6 +102,9 @@ func findNewMove(input string, move uint) (uint) {
 }
 
 func unitOccupied(game *Game, potential_move string) bool {
+	if potential_move[1:] == "15" {
+		return false
+	}
 	_, occupied := game.Grid.BoardState[potential_move]
     return occupied
 }
@@ -233,48 +237,97 @@ func findMoves(game *Game, move uint) ([]*Game, []string) {
 	return moves, messages
 }
 
-func Play(game *Game) {
+
+func Play(s *GameSession) {
 	fmt.Println("Game started")
+	s.Game = Init_Game()
 	var winner *Player = nil
-	var player_move uint
 
-	PrintBoard(game.Grid)
+	SendToAll(s, Start, "")
+	SendToAll(s, Grid, PrintBoard(s.Game.Grid)) 
 	for winner == nil {
-		fmt.Printf("It's %s's turn...\n", game.CurrentPlayer.PlayerName)
-		fmt.Printf("%s, please throw your dices...\n", game.CurrentPlayer.PlayerName)
+		SendToAll(s, TurnStart, fmt.Sprintf("It's %s's turn...\n", s.Game.CurrentPlayer.PlayerName))
 
-		reader := bufio.NewReader(os.Stdin)
-		_, _ = reader.ReadByte()
-		dices_res := throwDices() 
+		// fmt.Printf("%s, please throw your dices...\n", s.Game.CurrentPlayer.PlayerName)
 
+		// reader := bufio.NewReader(os.Stdin)
+		// _, _ = reader.ReadByte()
+		dices_res := throwDices(s) 
+		
 		if dices_res == 0 {
-			fmt.Println(game.CurrentPlayer.PlayerName + " rolled 0 LOL. Your turn is skipped...")
-			switchCurrentPlayer(game)
+			SendToAll(s, Dice, fmt.Sprintf(s.Game.CurrentPlayer.PlayerName + " rolled 0 LOL. Their turn is skipped..."))
+			switchCurrentPlayer(s.Game)
 			continue
 		}
+		SendToAll(s, Dice, fmt.Sprintf("%s rolled %d\n", s.Game.CurrentPlayer.PlayerName, dices_res))
 
-		moves, messages := findMoves(game, dices_res)
+		moves, messages := findMoves(s.Game, dices_res)
 		if len(moves) == 0 {
-			fmt.Println("You don't have any moves available, switching players...")
+			SendToAll(s, MakeMove, fmt.Sprintf("%s don't have any moves available, switching players...", s.Game.CurrentPlayer.PlayerName))
+			switchCurrentPlayer(s.Game)
 			continue
 		}
 
-		fmt.Printf("%s, please choose your move\n\n", game.CurrentPlayer.PlayerName)
+		str_moves := ""
+		for _, m := range messages {
+			str_moves += m + "\n"
+		}
+		SendToAll(s, MakeMove, str_moves)
+
 		for _, message := range messages {
 			fmt.Println(message)
 		}
 
-		player_move = uint(ParseMove(len(moves)))
-		game = moves[player_move]
-		switchCurrentPlayer(game)
-		PrintMap(game.Grid.BoardState)
-		PrintBoard(game.Grid)
-		PrintPlayerProgress(game.Player1)
-		PrintPlayerPieces(game.Player1)
-		PrintPlayerProgress(game.Player2)
-		PrintPlayerPieces(game.Player2)
-		winner = GetWinner(game)
+		player_move := <-s.MoveDataChannel
+		s.Game = moves[player_move]
+		switchCurrentPlayer(s.Game)
+		SendToAll(s, Grid, PrintBoard(s.Game.Grid)) 
+
+		SendToAll(s, Progress, PrintPlayerPieces(s.Game.Player1))
+		SendToAll(s, Progress, PrintPlayerPieces(s.Game.Player2))
+		// PrintPlayerProgress(s.Game.Player2)
+		winner = GetWinner(s.Game)
 	}
 
-	fmt.Printf("Game over, the winner is %s\n", game.Winner.PlayerName)
+	SendToAll(s, AnnounceWinner, fmt.Sprintf("Game over, the winner is %s\n", s.Game.Winner.PlayerName))
+}
+
+func getCurrentPlayerID(session *GameSession) int {
+	if session.Game.CurrentPlayer == session.Game.Player1 {
+		return 1
+	}
+	return 2
+}
+
+func SendToAll(session *GameSession, Msg_type Msg_Type, message string) {
+	var msg GameMessage
+	SetGameParam(session, &msg, Msg_type, message)
+	for _, player := range session.Connections {
+		err := player.WriteJSON(msg)
+		if err != nil {
+			log.Println("Sending error: ", err)
+		}
+	}
+}
+
+func SetGameParam(session *GameSession, Msg *GameMessage, Msg_type Msg_Type, message string) {
+	Msg.Content = message
+	Msg.CurrentPlayer = getCurrentPlayerID(session)
+
+	if Msg_type == Start {
+		Msg.Msg_Type = "Start_ACK"
+	} else if Msg_type == MakeMove {
+		Msg.Msg_Type = "Move"
+		Msg.Move = strings.Count(message, "\n")
+	} else if Msg_type == Grid {
+		Msg.Msg_Type = "Grid"
+	} else if Msg_type == TurnStart {
+		Msg.Msg_Type = "TurnStart"
+	} else if Msg_type == Dice {
+		Msg.Msg_Type = "Dice"
+	} else if Msg_type == Progress {
+		Msg.Msg_Type = "Progress"
+	} else if Msg_type == AnnounceWinner {
+		Msg.Msg_Type = "Winner"
+	}
 }

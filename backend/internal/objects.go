@@ -1,5 +1,35 @@
 package internal
 
+import (
+	"github.com/gorilla/websocket"
+)
+
+type GameSession struct {
+    ID string
+    Game *Game
+    Connections []*websocket.Conn
+	MoveDataChannel chan int
+}
+
+type GameMessage struct {
+	CurrentPlayer int	`json:"player"`
+    Msg_Type string     `json:"type"`
+    Move int            `json:"move"`
+	Content string		`json:"content"`
+}
+
+
+type Msg_Type uint
+const (
+    Start Msg_Type = iota
+	Grid
+	TurnStart
+	Dice
+	MakeMove
+	Progress
+	AnnounceWinner
+)
+
 type Game struct {
 	GameID uint
 	Turn uint

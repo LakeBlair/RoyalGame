@@ -2,84 +2,101 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
+	"github.com/LakeBlair/royalgame/backend/internal"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
-var upgrader = websocket.Upgrader{
-    ReadBufferSize:  1024,
-    WriteBufferSize: 1024,
+type WebSocketHandler struct {
+    upgrader  websocket.Upgrader
 }
 
-type ApiResponse struct {
-    Message string `json:"message"`
-}
+var (
+    sessions = make(map[string]*internal.GameSession)
+)
 
-func reader(conn *websocket.Conn) {
-    for {
-    // read in a message
-        messageType, p, err := conn.ReadMessage()
-        if err != nil {
-            log.Println(err)
-            return
-        }
-    // print out that message for clarity
-        fmt.Println(string(p))
-
-        if err := conn.WriteMessage(messageType, p); err != nil {
-            log.Println(err)
-            return
-        }
-
+func NewWSHandler(upgrader websocket.Upgrader) *WebSocketHandler {
+    return &WebSocketHandler{
+        upgrader:  upgrader,
     }
 }
 
-func wsEndpoint(w http.ResponseWriter, r *http.Request) {
-    upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+func (s *WebSocketHandler) createSession(w http.ResponseWriter, r *http.Request) {
+    log.Println("Creating New Session")
+    sessionID := uuid.New().String() // Generate a unique session ID
+    sessions[sessionID] = &internal.GameSession{
+        ID: sessionID,
+        MoveDataChannel: make(chan int),
+    }
+    w.Write([]byte(sessionID))
+}
 
-    // upgrade this connection to a WebSocket
-    // connection
-    conn, err := upgrader.Upgrade(w, r, nil)
-    if err != nil {
-        log.Println(err)
+func (s *WebSocketHandler) play(w http.ResponseWriter, r *http.Request) {
+    conn, conn_err := s.upgrader.Upgrade(w, r, nil)
+    if conn_err != nil {
+        log.Println("WebSocket Upgrade Error:", conn_err)
+        return
+    }
+    // defer conn.Close()
+
+    sessionID := r.URL.Query().Get("session_id")
+    if sessionID == "" {
+        http.Error(w, "Session ID required", http.StatusBadRequest)
         return
     }
 
-    defer conn.Close() 
+    // Add new client connection to session
+    session, exists := sessions[sessionID]
 
-    log.Println("Client Connected")
-    err = conn.WriteMessage(websocket.TextMessage, []byte("Hi Client!"))
-    if err != nil {
-        log.Println(err)
+    if !exists {
+        log.Println("Session doesn't exist, exiting...")
+        return
+    }
+    if len(session.Connections) < 2 {
+        session.Connections = append(session.Connections, conn)
+        sessions[sessionID] = session
     }
 
-    reader(conn)
+    _, message, read_err := conn.ReadMessage()
+    if read_err != nil {
+        log.Println("Read Error:", read_err)
+        return
+    }
+    log.Printf("Received: %s", message)
+
+    var Msg internal.GameMessage
+
+    if err := json.Unmarshal(message, &Msg); err != nil {
+        log.Println("Data Error:", err)
+        return
+    }
+
+    switch Msg.Msg_Type {
+    case "Start":
+        if len(session.Connections) == 2 {
+            go internal.Play(session)
+        }
+    case "Move":
+        log.Printf("Move: %d", Msg.Move)
+        session.MoveDataChannel <- Msg.Move
+    }
 }
 
-func dataHandler(w http.ResponseWriter, r *http.Request) {
-    response := ApiResponse{Message: "Hello from the Golang API!"}
-    log.Println("Hello from the Golang API!")
-    json.NewEncoder(w).Encode(response)
-}
 
-
-// func homePage(w http.ResponseWriter, r *http.Request) {
-//     http.ServeFile(w, r, "../../frontend/build")
-// }
-
-func setupRoutes() {
+func (s *WebSocketHandler) setupRoutes() {
     log.Println("Setting up routes")
     buildDir := http.Dir("../../frontend/build")
     fs := http.FileServer(buildDir)
     http.Handle("/", fs)
-    http.HandleFunc("/ws", wsEndpoint)
-    http.HandleFunc("/api/data", dataHandler)
+    http.HandleFunc("/play", s.play)
+    http.HandleFunc("/create-session", s.createSession)
 }
 
-func LaunchGameServer() {
-    setupRoutes()
-    log.Fatal(http.ListenAndServe(":8080", nil))
+
+func (s *WebSocketHandler) LaunchGame(addr string) {
+    s.setupRoutes()
+    log.Fatal(http.ListenAndServe(addr, nil))
 }
