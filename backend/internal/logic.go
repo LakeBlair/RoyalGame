@@ -52,7 +52,7 @@ func throwDices(s *GameSession) uint {
 			move += 1
 		}
 	}
-	SendToAll(s, Dice, fmt.Sprintf("%s's total moves is %d\n", s.Game.CurrentPlayer.PlayerName, move))
+	SendToAll(s, Dice, fmt.Sprintf("%s's total moves is %d\n", s.Game.CurrentPlayer.PlayerName, move), 0)
 	return move
 }
 
@@ -75,8 +75,10 @@ func switchCurrentPlayer(game *Game) {
 
 	if game.CurrentPlayer == game.Player1 {
 		game.CurrentPlayer = game.Player2
+		log.Printf("Switching to %s\n", game.Player2.PlayerName)
 	} else {
 		game.CurrentPlayer = game.Player1
+		log.Printf("Switching to %s\n", game.Player1.PlayerName)
 	}
 }
 
@@ -243,10 +245,10 @@ func Play(s *GameSession) {
 	s.Game = Init_Game()
 	var winner *Player = nil
 
-	SendToAll(s, Start, "")
-	SendToAll(s, Grid, PrintBoard(s.Game.Grid)) 
+	SendToAll(s, Start, "", 0)
+	SendToAll(s, Grid, PrintBoard(s.Game.Grid), 0) 
 	for winner == nil {
-		SendToAll(s, TurnStart, fmt.Sprintf("It's %s's turn...\n", s.Game.CurrentPlayer.PlayerName))
+		SendToAll(s, TurnStart, fmt.Sprintf("It's %s's turn...\n", s.Game.CurrentPlayer.PlayerName), 0)
 
 		// fmt.Printf("%s, please throw your dices...\n", s.Game.CurrentPlayer.PlayerName)
 
@@ -255,15 +257,16 @@ func Play(s *GameSession) {
 		dices_res := throwDices(s) 
 		
 		if dices_res == 0 {
-			SendToAll(s, Dice, fmt.Sprintf(s.Game.CurrentPlayer.PlayerName + " rolled 0 LOL. Their turn is skipped..."))
+			// SendToAll(s, Dice, fmt.Sprintf(s.Game.CurrentPlayer.PlayerName + " rolled 0 LOL. Their turn is skipped..."))
+			log.Printf(s.Game.CurrentPlayer.PlayerName + " rolled 0 LOL. Their turn is skipped...\n")
 			switchCurrentPlayer(s.Game)
 			continue
 		}
-		SendToAll(s, Dice, fmt.Sprintf("%s rolled %d\n", s.Game.CurrentPlayer.PlayerName, dices_res))
+		SendToAll(s, Dice, fmt.Sprintf("%s rolled %d\n", s.Game.CurrentPlayer.PlayerName, dices_res), 0)
 
 		moves, messages := findMoves(s.Game, dices_res)
 		if len(moves) == 0 {
-			SendToAll(s, MakeMove, fmt.Sprintf("%s don't have any moves available, switching players...", s.Game.CurrentPlayer.PlayerName))
+			SendToAll(s, MakeMove, fmt.Sprintf("%s don't have any moves available, switching players...", s.Game.CurrentPlayer.PlayerName), 0)
 			switchCurrentPlayer(s.Game)
 			continue
 		}
@@ -272,7 +275,7 @@ func Play(s *GameSession) {
 		for _, m := range messages {
 			str_moves += m + "\n"
 		}
-		SendToAll(s, MakeMove, str_moves)
+		SendToAll(s, MakeMove, str_moves, 0)
 
 		for _, message := range messages {
 			fmt.Println(message)
@@ -281,15 +284,15 @@ func Play(s *GameSession) {
 		player_move := <-s.MoveDataChannel
 		s.Game = moves[player_move]
 		switchCurrentPlayer(s.Game)
-		SendToAll(s, Grid, PrintBoard(s.Game.Grid)) 
+		SendToAll(s, Grid, PrintBoard(s.Game.Grid), 0) 
 
-		SendToAll(s, Progress, PrintPlayerPieces(s.Game.Player1))
-		SendToAll(s, Progress, PrintPlayerPieces(s.Game.Player2))
+		SendToAll(s, Progress, PrintPlayerPieces(s.Game.Player1), 1)
+		SendToAll(s, Progress, PrintPlayerPieces(s.Game.Player2), 2)
 		// PrintPlayerProgress(s.Game.Player2)
 		winner = GetWinner(s.Game)
 	}
 
-	SendToAll(s, AnnounceWinner, fmt.Sprintf("Game over, the winner is %s\n", s.Game.Winner.PlayerName))
+	SendToAll(s, AnnounceWinner, fmt.Sprintf("Game over, the winner is %s\n", s.Game.Winner.PlayerName), 0)
 }
 
 func getCurrentPlayerID(session *GameSession) int {
@@ -299,9 +302,10 @@ func getCurrentPlayerID(session *GameSession) int {
 	return 2
 }
 
-func SendToAll(session *GameSession, Msg_type Msg_Type, message string) {
+func SendToAll(session *GameSession, Msg_type Msg_Type, message string, receiver_id int) {
 	var msg GameMessage
-	SetGameParam(session, &msg, Msg_type, message)
+
+	SetGameParam(session, &msg, Msg_type, message, receiver_id)
 	for _, player := range session.Connections {
 		err := player.WriteJSON(msg)
 		if err != nil {
@@ -310,7 +314,7 @@ func SendToAll(session *GameSession, Msg_type Msg_Type, message string) {
 	}
 }
 
-func SetGameParam(session *GameSession, Msg *GameMessage, Msg_type Msg_Type, message string) {
+func SetGameParam(session *GameSession, Msg *GameMessage, Msg_type Msg_Type, message string, receiver_id int) {
 	Msg.Content = message
 	Msg.CurrentPlayer = getCurrentPlayerID(session)
 
@@ -327,6 +331,7 @@ func SetGameParam(session *GameSession, Msg *GameMessage, Msg_type Msg_Type, mes
 		Msg.Msg_Type = "Dice"
 	} else if Msg_type == Progress {
 		Msg.Msg_Type = "Progress"
+		Msg.MessageRecevier = receiver_id
 	} else if Msg_type == AnnounceWinner {
 		Msg.Msg_Type = "Winner"
 	}

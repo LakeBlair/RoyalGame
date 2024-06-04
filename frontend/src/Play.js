@@ -35,17 +35,17 @@ function PlayPage() {
                 if (receivedMessage.type == "Grid") {
                     setBoard(receivedMessage.content);
                 }
-                if (receivedMessage.type == "Turn") {
+                if (receivedMessage.type == "TurnStart") {
                     setTurn(receivedMessage.content);
                 }
                 if (receivedMessage.type == "Dice") {
                     setDice(receivedMessage.content);
                 }
                 if (receivedMessage.type == "Progress") {
-                    if (receivedMessage.player == 1) {
+                    if (receivedMessage.receiver == 1) {
                         setProgress1(receivedMessage.content);
                     }
-                    if (receivedMessage.player == 2) {
+                    if (receivedMessage.receiver == 2) {
                         setProgress2(receivedMessage.content);
                     }
                 }
@@ -95,11 +95,11 @@ function PlayPage() {
             <h2><pre>{winner}</pre></h2>
             <pre>{turn}</pre>
             <pre>{dice}</pre>
-            {ready ? <p>Player 1 Progress:</p> : null}
+            {ready && <p>Player 1 Progress:</p>}
             <pre>{progress1}</pre>
-            {ready ? <p>Player 2 Progress:</p> : null}
+            {ready && <p>Player 2 Progress:</p>}
             <pre>{progress2}</pre>
-            {ready ? null : <p>Session ID: {sessionId}</p>}
+            {!ready && <p>Session ID: {sessionId}</p>}
             <pre>{board}</pre>
             <pre>{move}</pre>
             <div>

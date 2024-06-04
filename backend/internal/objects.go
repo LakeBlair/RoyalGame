@@ -13,6 +13,7 @@ type GameSession struct {
 
 type GameMessage struct {
 	CurrentPlayer int	`json:"player"`
+	MessageRecevier int	`json:"receiver"`
     Msg_Type string     `json:"type"`
     Move int            `json:"move"`
 	Content string		`json:"content"`
