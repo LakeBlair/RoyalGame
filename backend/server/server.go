@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+    "os"
 
 	"github.com/LakeBlair/royalgame/backend/internal"
 	"github.com/google/uuid"
@@ -96,7 +97,14 @@ func (s *WebSocketHandler) setupRoutes() {
 }
 
 
-func (s *WebSocketHandler) LaunchGame(addr string) {
+func (s *WebSocketHandler) LaunchGame() {
     s.setupRoutes()
-    log.Fatal(http.ListenAndServe(addr, nil))
+    
+    port := os.Getenv("PORT") // Get the port from the environment
+    if port == "" {
+        log.Fatal("$PORT must be set")
+        port = "8080" // Default to 8080 if not set (for local testing)
+    }
+
+    log.Fatal(http.ListenAndServe(":" + port, nil))
 }

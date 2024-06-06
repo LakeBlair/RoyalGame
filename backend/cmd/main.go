@@ -12,7 +12,7 @@ import (
 
 
 func main() {
-	fmt.Println("Starting the game")
+	fmt.Println("Starting the server")
 
 	config := server.Get("config.yaml")
 	CORS := config.GetStringSlice("CORS")
@@ -23,10 +23,10 @@ func main() {
 		if !check {
 			log.Printf("Error Origin: Host - (%s) | URL - (%s)", r.URL.Host, r.URL)
 		}
-		return check
+		return true
 	}
 
 	wsHandler := server.NewWSHandler(upgrader)
 	log.Println(config.GetString("ADDR"))
-	wsHandler.LaunchGame(config.GetString("ADDR"))
+	wsHandler.LaunchGame()
 }
