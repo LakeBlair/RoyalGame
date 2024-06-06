@@ -17,11 +17,10 @@ function PlayPage() {
     const [move, setMove] = useState('')
     const [moveCount, setMoveCount] = useState(0)
     const [ready, setReady] = useState(false)
-    const baseUrl = process.env.NODE_ENV === 'production'
-                    ? `wss://${window.location.host}/play`
-                    : 'ws://localhost:8080/play';
+    const baseUrl = `ws://${window.location.host}/play`;
     const url = `${baseUrl}?session_id=${sessionId}&player_id=${playerId}`;
     const ws = new WebSocket(url);
+    console.log(process.env.NODE_ENV);
 
     useEffect(() => {
         if (sessionId) {
