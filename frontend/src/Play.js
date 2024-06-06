@@ -17,10 +17,7 @@ function PlayPage() {
     const [move, setMove] = useState('')
     const [moveCount, setMoveCount] = useState(0)
     const [ready, setReady] = useState(false)
-    const baseUrl = `ws://${window.location.host}/play`;
-    const url = `${baseUrl}?session_id=${sessionId}&player_id=${playerId}`;
-    const ws = new WebSocket(url);
-    console.log(process.env.NODE_ENV);
+    const ws = new WebSocket(`ws://${window.location.host}/play?session_id=${sessionId}&player_id=${playerId}`);
 
     useEffect(() => {
         if (sessionId) {
@@ -32,30 +29,30 @@ function PlayPage() {
             ws.onmessage = (event) => {
                 const receivedMessage = JSON.parse(event.data);
                 console.log('Received message:', receivedMessage);
-                if (receivedMessage.type === "Start_ACK") {
-                    setReady(r => !r);
+                if (receivedMessage.type == "Start_ACK") {
+                    setReady(!ready);
                 }
-                if (receivedMessage.type === "Grid") {
+                if (receivedMessage.type == "Grid") {
                     setBoard(receivedMessage.content);
                 }
-                if (receivedMessage.type === "TurnStart") {
+                if (receivedMessage.type == "TurnStart") {
                     setTurn(receivedMessage.content);
                 }
-                if (receivedMessage.type === "Dice") {
+                if (receivedMessage.type == "Dice") {
                     setDice(receivedMessage.content);
                 }
-                if (receivedMessage.type === "Progress") {
-                    if (receivedMessage.receiver === 1) {
+                if (receivedMessage.type == "Progress") {
+                    if (receivedMessage.receiver == 1) {
                         setProgress1(receivedMessage.content);
                     }
-                    if (receivedMessage.receiver === 2) {
+                    if (receivedMessage.receiver == 2) {
                         setProgress2(receivedMessage.content);
                     }
                 }
-                if (receivedMessage.type === "Winner") {
+                if (receivedMessage.type == "Winner") {
                     setWinner(receivedMessage.content);
                 }
-                if (receivedMessage.type === "Move") {
+                if (receivedMessage.type == "Move") {
                     setMove(receivedMessage.content);
                     setMoveCount(receivedMessage.move);
                     setCurrentPid(receivedMessage.player);
@@ -75,7 +72,7 @@ function PlayPage() {
                 ws.close();
             };
         }
-    }, [sessionId]);
+    }, [sessionId, playerId]);
 
     const handlePlayerMove = (move) => {
         console.log(ws);
@@ -106,7 +103,7 @@ function PlayPage() {
             <pre>{board}</pre>
             <pre>{move}</pre>
             <div>
-                {currentPid === playerId && Array.from({ length: moveCount }, (_, i) => (
+                {currentPid == playerId && Array.from({ length: moveCount }, (_, i) => (
                     <button key={i} className="game-button" onClick={() => handlePlayerMove(i)}>
                         Move {i}
                     </button>
