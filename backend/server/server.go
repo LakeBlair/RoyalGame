@@ -99,10 +99,10 @@ func (s *WebSocketHandler) setupRoutes() {
 
 func (s *WebSocketHandler) LaunchGame() {
     s.setupRoutes()
-    
+
     port := os.Getenv("PORT") // Get the port from the environment
     if port == "" {
-        log.Fatal("$PORT must be set")
+        log.Println("$PORT set to 8080")
         port = "8080" // Default to 8080 if not set (for local testing)
     }
 
