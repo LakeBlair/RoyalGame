@@ -14,7 +14,7 @@ import (
 func main() {
 	fmt.Println("Starting the game")
 
-	config := server.Get("../../config.yaml")
+	config := server.Get("config.yaml")
 	CORS := config.GetStringSlice("CORS")
 	upgrader := websocket.Upgrader{}
 

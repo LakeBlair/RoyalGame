@@ -88,7 +88,7 @@ func (s *WebSocketHandler) play(w http.ResponseWriter, r *http.Request) {
 
 func (s *WebSocketHandler) setupRoutes() {
     log.Println("Setting up routes")
-    buildDir := http.Dir("../../frontend/build")
+    buildDir := http.Dir("frontend/build")
     fs := http.FileServer(buildDir)
     http.Handle("/", fs)
     http.HandleFunc("/play", s.play)
