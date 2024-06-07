@@ -17,7 +17,10 @@ function PlayPage() {
     const [move, setMove] = useState('')
     const [moveCount, setMoveCount] = useState(0)
     const [ready, setReady] = useState(false)
-    const ws = new WebSocket(`ws://${window.location.host}/play?session_id=${sessionId}&player_id=${playerId}`);
+    const ws = new WebSocket(`wss://${window.location.host}/play?session_id=${sessionId}&player_id=${playerId}`);
+
+    console.log(process.env.NODE_ENV);
+    console.log(window.location.host);
 
     useEffect(() => {
         if (sessionId) {
