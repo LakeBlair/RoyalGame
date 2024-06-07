@@ -93,9 +93,11 @@ func hello(w http.ResponseWriter, r *http.Request) {
 
 func (s *WebSocketHandler) setupRoutes() {
     log.Println("Setting up routes")
-    // buildDir := http.Dir("frontend/build")
-    // fs := http.FileServer(buildDir)
-    http.HandleFunc("/", hello)
+    buildDir := http.Dir("frontend/build")
+    fs := http.FileServer(buildDir)
+    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+        fs.ServeHTTP(w, r)
+    })
     http.HandleFunc("/play", s.play)
     http.HandleFunc("/create-session", s.createSession)
 }
