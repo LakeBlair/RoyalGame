@@ -2,9 +2,10 @@ package server
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
-    "os"
+	"os"
 
 	"github.com/LakeBlair/royalgame/backend/internal"
 	"github.com/google/uuid"
@@ -86,12 +87,15 @@ func (s *WebSocketHandler) play(w http.ResponseWriter, r *http.Request) {
     }
 }
 
+func hello(w http.ResponseWriter, r *http.Request) {
+    io.WriteString(w, "Hellow World")
+}
 
 func (s *WebSocketHandler) setupRoutes() {
     log.Println("Setting up routes")
-    buildDir := http.Dir("frontend/build")
-    fs := http.FileServer(buildDir)
-    http.Handle("/", fs)
+    // buildDir := http.Dir("frontend/build")
+    // fs := http.FileServer(buildDir)
+    http.HandleFunc("/", hello)
     http.HandleFunc("/play", s.play)
     http.HandleFunc("/create-session", s.createSession)
 }
@@ -100,10 +104,10 @@ func (s *WebSocketHandler) setupRoutes() {
 func (s *WebSocketHandler) LaunchGame() {
     s.setupRoutes()
 
-    port := os.Getenv("PORT") // Get the port from the environment
+    port := os.Getenv("PORT")
     if port == "" {
         log.Println("$PORT set to 8080")
-        port = "8080" // Default to 8080 if not set (for local testing)
+        port = "8080"
     }
 
     log.Fatal(http.ListenAndServe(":" + port, nil))
