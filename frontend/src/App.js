@@ -13,6 +13,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/pvp" element={<PvPPage />} />
             <Route path="/play" element={<PlayPage />} />
+            <Route path="*" element={<HomePage />} />
           </Routes>
         </Router>
       </header>

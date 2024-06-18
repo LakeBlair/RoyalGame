@@ -2,7 +2,7 @@ package server
 
 import (
 	"encoding/json"
-	"io"
+	// "io"
 	"log"
 	"net/http"
 	"os"
@@ -37,6 +37,7 @@ func (s *WebSocketHandler) createSession(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *WebSocketHandler) play(w http.ResponseWriter, r *http.Request) {
+    log.Println("play API is called")
     conn, conn_err := s.upgrader.Upgrade(w, r, nil)
     if conn_err != nil {
         log.Println("WebSocket Upgrade Error:", conn_err)
@@ -87,16 +88,18 @@ func (s *WebSocketHandler) play(w http.ResponseWriter, r *http.Request) {
     }
 }
 
-func hello(w http.ResponseWriter, r *http.Request) {
-    io.WriteString(w, "Hellow World")
-}
-
 func (s *WebSocketHandler) setupRoutes() {
     log.Println("Setting up routes")
     buildDir := http.Dir("frontend/build")
     fs := http.FileServer(buildDir)
+
     http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-        fs.ServeHTTP(w, r)
+        if _, err := os.Stat("frontend/build" + r.URL.Path); os.IsNotExist(err) {
+            log.Println("File not found; Fall Back to index.html")
+            http.ServeFile(w, r, "frontend/build/index.html")
+        } else {
+            fs.ServeHTTP(w, r)
+        }
     })
     http.HandleFunc("/play", s.play)
     http.HandleFunc("/create-session", s.createSession)
